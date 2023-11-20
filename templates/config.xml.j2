@@ -144,14 +144,17 @@
   <tcp_with_proxy_port>{{ clickhouse_tcp_with_proxy_port }}</tcp_with_proxy_port>
   {% endif -%}
 
+  {% if clickhouse_interserver_https_port is undefined -%}
   <!-- Port for communication between replicas. Used for data exchange.
     It provides low-level data access between servers.
     This port should not be accessible from untrusted networks.
     See also 'interserver_http_credentials'.
     Data transferred over connections to this port should not go through untrusted networks.
     See also 'interserver_https_port'.
+    This cannot be defined in config if 'interserver_https_port' is defined.
   -->
   <interserver_http_port>{{ clickhouse_interserver_http_port }}</interserver_http_port>
+  {% endif -%}
 
   <!-- Port for communication between replicas with TLS.
     You have to configure certificate to enable this interface.
@@ -284,13 +287,10 @@
       <!-- openssl req -subj "/CN=localhost" -new -newkey rsa:2048 -days 365 -nodes -x509 -keyout /etc/clickhouse-server/server.key -out /etc/clickhouse-server/server.crt -->
       <certificateFile>{{ clickhouse_certificatefile }}</certificateFile>
       <privateKeyFile>{{ clickhouse_privatekeyfile }}</privateKeyFile>
-      <!-- dhparams are optional. You can delete the <dhParamsFile> element.
-        To generate dhparams, use the following command:
-        openssl dhparam -out /etc/clickhouse-server/dhparam.pem 4096
-        Only file format with BEGIN DH PARAMETERS is supported.
-      -->
-      <dhParamsFile>{{ clickhouse_dhparamsfile }}</dhParamsFile>
       <verificationMode>{{ clickhouse_verificationmode }}</verificationMode>
+      {% if clickhouse_caconfigfile is defined -%}
+      <caConfig>{{ clickhouse_caconfigfile }}</caConfig>
+      {% endif %}
       <loadDefaultCAFile>{{ clickhouse_loaddefaultcafile_server }}</loadDefaultCAFile>
       <cacheSessions>{{ clickhouse_cachesessions_server }}</cacheSessions>
       <disableProtocols>{{ clickhouse_disableprotocols_server }}</disableProtocols>
@@ -299,6 +299,9 @@
 
     <client> <!-- Used for connecting to https dictionary source and secured Zookeeper communication -->
       <loadDefaultCAFile>{{ clickhouse_loaddefaultcafile_client }}</loadDefaultCAFile>
+      {% if clickhouse_caconfigfile_client is defined -%}
+      <caConfig>{{ clickhouse_caconfigfile_client }}</caConfig>
+      {% endif -%}
       <cacheSessions>{{ clickhouse_cachesessions_client }}</cacheSessions>
       <disableProtocols>{{ clickhouse_disableprotocols_client }}</disableProtocols>
       <preferServerCiphers>{{ clickhouse_preferserverciphers_client }}</preferServerCiphers>
@@ -804,6 +807,9 @@
     <keeper_server>
         <!-- Clients use this port to connect (should match zookeeper port) -->
         <tcp_port>{{ clickhouse_keeper.tcp_port }}</tcp_port>
+{% if clickhouse_keeper.tcp_port_secure is defined %}
+        <tcp_port_secure>{{ clickhouse_keeper.tcp_port_secure }}</tcp_port_secure>
+{% endif %}
         <server_id>{{ keeper_server.id }}</server_id>
         <log_storage_path>{{ clickhouse_keeper.log_storage_path }}</log_storage_path>
         <snapshot_storage_path>{{ clickhouse_keeper.snapshot_storage_path }}</snapshot_storage_path>
@@ -855,6 +861,9 @@
     <node>
       <host>{{ node.host }}</host>
       <port>{{ node.port }}</port>
+{% if node.secure is defined %}
+      <secure>{{ node.secure }}</secure>
+{% endif %}
     </node>
 {% endfor %}
   </zookeeper>
